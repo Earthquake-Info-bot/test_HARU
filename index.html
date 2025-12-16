@@ -109,17 +109,18 @@ const p2pToShindo = {
   50:"5+",55:"6-",60:"6+",70:"7"
 };
 
-// ==================== 座標取得（直fetch） ====================
+// ==================== 座標取得（gist API 経由） ====================
 async function getCoordinates(names) {
   const res = await fetch(
-    'https://raw.githubusercontent.com/iku55/79005d1896631ad6117bbe327b8162c1/master/quake_station.json',
-    { cache: 'force-cache' }
+    'https://api.github.com/gists/79005d1896631ad6117bbe327b8162c1'
   );
   if (!res.ok) throw new Error('coords fetch failed');
 
-  const list = await res.json(); // 配列
-  const dict = {};
+  const gist = await res.json();
+  const file = Object.values(gist.files)[0];
+  const list = JSON.parse(file.content);
 
+  const dict = {};
   for (const item of list) {
     if (item.name && item.lat && item.lon) {
       dict[item.name] = {
@@ -203,8 +204,10 @@ function updateMaxIntensityPosition(){
           iconAnchor:[15,15],
           pane:'hypocenterPane'
         });
-        L.marker([hypo.latitude, hypo.longitude],
-          {icon:cross, interactive:false}).addTo(map);
+        L.marker(
+          [hypo.latitude, hypo.longitude],
+          {icon:cross, interactive:false}
+        ).addTo(map);
       }
 
       if (bounds.length) {
@@ -235,12 +238,11 @@ function updateMaxIntensityPosition(){
 
       break; // 最新1件のみ
     }
-    } catch (e) {
-  const loading = document.getElementById('loading');
+  } catch (e) {
+    const loading = document.getElementById('loading');
     loading.innerHTML =
       '<b>エラー内容</b><br>' +
-      (e?.message || e) + '<br><br>' +
-      '※ 座標JSONまたはP2P APIの取得に失敗しています';
+      (e?.message || e);
   }
 })();
 </script>
