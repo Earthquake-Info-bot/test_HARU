@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップ v2</title>
+<title>地震マップ v3</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -109,15 +109,14 @@ const p2pToShindo = {
   50:"5+",55:"6-",60:"6+",70:"7"
 };
 
-// ==================== 座標取得（Safari対応・raw直） ====================
+// ==================== 座標取得（gist raw・最終確定） ====================
 async function getCoordinates(names) {
   const res = await fetch(
-    'https://raw.githubusercontent.com/iku55/79005d1896631ad6117bbe327b8162c1/main/quake_station.json'
+    'https://gist.githubusercontent.com/iku55/79005d1896631ad6117bbe327b8162c1/raw/quake_station.json'
   );
   if (!res.ok) throw new Error('coords fetch failed');
 
-  const json = await res.json();
-  const list = Array.isArray(json) ? json : Object.values(json);
+  const list = await res.json(); // ← 確実に配列
 
   const dict = {};
   list.forEach(item => {
@@ -133,6 +132,7 @@ async function getCoordinates(names) {
   names.forEach(n => {
     if (dict[n]) result[n] = dict[n];
   });
+
   return result;
 }
 
