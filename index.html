@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップ / NAFY</title>
+<title>地震マップ</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -235,10 +235,12 @@ function updateMaxIntensityPosition(){
 
       break; // 最新1件のみ
     }
-  } catch (e) {
-    document.getElementById('loading').innerHTML =
-      'エラーが発生しました<br>再読み込みしてください';
-    console.error(e);
+    } catch (e) {
+  const loading = document.getElementById('loading');
+    loading.innerHTML =
+      '<b>エラー内容</b><br>' +
+      (e?.message || e) + '<br><br>' +
+      '※ 座標JSONまたはP2P APIの取得に失敗しています';
   }
 })();
 </script>
