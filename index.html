@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップ v5</title>
+<title>地震マップ v6</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -199,12 +199,12 @@ function addIntensityMarker(lat, lon, intensity, text){
       const maxIntensity = p2pToShindo[eq.maxScale] || '不明';
 
       document.getElementById('hypo-info').innerHTML =
-        `${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
-        ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}頃` : '発生時刻不明'}<br>
-         ${hypo.name || '震源地不明'}<br>
-         M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}
-         深さ ${hypo.depth != null ? hypo.depth : '不明'}km<br>
-         <span>最大震度：${maxIntensity}</span>`;
+        `【WDIN地震情報】<br>発生時刻: ${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
+        ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}` : '発生時刻不明'}<br>
+         震源地: ${hypo.name || '不明'}<br>
+         マグニチュード: M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}
+         震源の深さ: ${hypo.depth != null ? hypo.depth : '不明'}km<br>
+         最大震度: ${maxIntensity}`;
 
       break; // 最新1件のみ
     }
