@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップ v9（OpenStreetMap）</title>
+<title>地震マップ v8（OpenStreetMap）</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -72,10 +72,6 @@ L.tileLayer(
   }
 ).addTo(map);
 
-// 震源マーカー専用 pane（震度マーカーより前面）
-map.createPane('hypocenterPane');
-map.getPane('hypocenterPane').style.zIndex = 650; // デフォルトマーカーより前
-
 // ==================== 定数 ====================
 const colors = {
   "1":"rgb(163,213,224)","2":"rgb(140,186,122)","3":"rgb(254,246,15)","4":"rgb(239,126,56)",
@@ -104,6 +100,7 @@ async function getCoordinates(names) {
 
   const list = await res.json();
   const dict = {};
+
   list.forEach(item => {
     if (item.name && item.lat && item.lon) {
       dict[item.name] = { lat: Number(item.lat), lon: Number(item.lon) };
@@ -111,76 +108,79 @@ async function getCoordinates(names) {
   });
 
   const result = {};
-  names.forEach(n => {
-    if (dict[n]) result[n] = dict[n];
-  });
+  names.forEach(n => { if(dict[n]) result[n] = dict[n]; });
   return result;
 }
 
 // ==================== 震度マーカー ====================
 function addIntensityMarker(lat, lon, intensity, text) {
   const icon = L.divIcon({
-    className: '',
-    html: `<div class="intensity-marker" style="background:${colors[intensity]};color:${textColors[intensity]}">${intensity}</div>`,
-    iconSize: [32,32],
-    iconAnchor: [16,16]
+    className:'',
+    html:`<div class="intensity-marker" style="background:${colors[intensity]}; color:${textColors[intensity]}">${intensity}</div>`,
+    iconSize:[32,32],
+    iconAnchor:[16,16]
   });
-
-  const marker = L.marker([lat, lon], {
+  const marker = L.marker([lat,lon], {
     icon,
     zIndexOffset: intensityOrder[intensity]*1000
   }).addTo(map);
-
-  if (text) marker.bindPopup(text);
+  if(text) marker.bindPopup(text);
 }
 
 // ==================== 地震情報取得 ====================
-(async () => {
-  try {
+(async ()=>{
+  try{
     const res = await fetch('https://api.p2pquake.net/v2/history?codes=551&limit=5');
-    if (!res.ok) throw new Error('p2p fetch failed');
-
+    if(!res.ok) throw new Error('p2p fetch failed');
     const data = await res.json();
 
-    for (const eqData of data) {
-      if (eqData.issue?.type !== "DetailScale") continue;
+    for(const eqData of data){
+      if(eqData.issue?.type !== "DetailScale") continue;
 
       const points = eqData.points || [];
-      const names = points.map(p => p.addr);
+      const names = points.map(p=>p.addr);
       const coordMap = await getCoordinates(names);
 
       let bounds = [];
 
-      points.forEach(p => {
+      // 最大震度を計算
+      let maxIntVal = 0;
+      points.forEach(p=>{
+        const i = p2pToShindo[p.scale];
+        if(i && intensityOrder[i] > maxIntVal) maxIntVal = intensityOrder[i];
+      });
+
+      // 震度マーカー追加
+      points.forEach(p=>{
         const c = coordMap[p.addr];
         const i = p2pToShindo[p.scale];
-        if (c && i) {
-          addIntensityMarker(c.lat, c.lon, i, p.addr);
-          bounds.push([c.lat, c.lon]);
+        if(c && i){
+          addIntensityMarker(c.lat,c.lon,i,p.addr);
+          bounds.push([c.lat,c.lon]);
         }
       });
 
+      // 震源マーカー
       const eq = eqData.earthquake || {};
       const hypo = eq.hypocenter || {};
-
-      if (hypo.latitude > -100 && hypo.longitude > -100) {
-        bounds.push([hypo.latitude, hypo.longitude]);
+      if(hypo.latitude>-100 && hypo.longitude>-100){
+        bounds.push([hypo.latitude,hypo.longitude]);
 
         const cross = L.divIcon({
-          className: '',
-          html: `<div style="width:30px;height:30px;position:relative;transform:rotate(45deg)">
-            <div style="position:absolute;left:13px;width:4px;height:30px;background:red"></div>
-            <div style="position:absolute;top:13px;width:30px;height:4px;background:red"></div>
-          </div>`,
+          className:'',
+          html:`<div style="width:30px;height:30px;position:relative;transform:rotate(45deg)">
+                  <div style="position:absolute;left:13px;width:4px;height:30px;background:red"></div>
+                  <div style="position:absolute;top:13px;width:30px;height:4px;background:red"></div>
+                </div>`,
           iconSize:[30,30],
-          iconAnchor:[15,15],
-          pane:'hypocenterPane'
+          iconAnchor:[15,15]
         });
 
-        L.marker([hypo.latitude,hypo.longitude],{icon:cross,interactive:false}).addTo(map);
+        const zOffset = maxIntVal*1000 + 1; // 最大震度の前面
+        L.marker([hypo.latitude,hypo.longitude],{icon:cross,interactive:false,zIndexOffset:zOffset}).addTo(map);
       }
 
-      if (bounds.length) map.fitBounds(bounds,{padding:[120,120],maxZoom:8});
+      if(bounds.length) map.fitBounds(bounds,{padding:[120,120],maxZoom:8});
 
       document.getElementById('loading').style.display='none';
 
@@ -189,16 +189,16 @@ function addIntensityMarker(lat, lon, intensity, text) {
 
       document.getElementById('hypo-info').innerHTML=
         `【WDIN地震情報】<br>
-         発生時刻: ${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()} ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}`:'不明'}<br>
+         発生時刻: ${time? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()} ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}`:'不明'}<br>
          震源地: ${hypo.name || '不明'}<br>
-         マグニチュード: M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}<br>
-         震源の深さ: ${hypo.depth != null ? hypo.depth : '不明'}km<br>
+         マグニチュード: M${hypo.magnitude!=null? hypo.magnitude.toFixed(1):'不明'}<br>
+         震源の深さ: ${hypo.depth!=null? hypo.depth:'不明'}km<br>
          最大震度: ${maxIntensity}`;
 
       break; // 最新1件のみ
     }
-  } catch(e) {
-    document.getElementById('loading').innerHTML='<b>エラー内容</b><br>'+ (e?.message||e);
+  }catch(e){
+    document.getElementById('loading').innerHTML='<b>エラー内容</b><br>' + (e?.message||e);
   }
 })();
 </script>
