@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップv7</title>
+<title>地震マップv8</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -63,9 +63,13 @@ body {
 // ==================== 地図初期化 ====================
 const map = L.map('map').setView([37.5, 138], 5);
 
+// --- 国土地理院 白地図（都道府県境あり） ---
 L.tileLayer(
-  'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-  { attribution: '&copy; CARTO', maxZoom: 19 }
+  'https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png',
+  {
+    attribution: '© 国土地理院',
+    maxZoom: 18
+  }
 ).addTo(map);
 
 map.createPane('hypocenterPane');
@@ -83,21 +87,17 @@ const colors = {
   "6+":"rgb(207,33,146)",
   "7":"rgb(134,1,82)"
 };
+
 const textColors = {
-  "1":"#000",
-  "2":"#000",
-  "3":"#000",
-  "4":"#000",
-  "5-":"#fff",
-  "5+":"#fff",
-  "6-":"#fff",
-  "6+":"#fff",
-  "7":"#fff"
+  "1":"#000","2":"#000","3":"#000","4":"#000",
+  "5-":"#fff","5+":"#fff","6-":"#fff","6+":"#fff","7":"#fff"
 };
+
 const p2pToShindo = {
   10:"1",20:"2",30:"3",40:"4",45:"5-",
   50:"5+",55:"6-",60:"6+",70:"7"
 };
+
 // 震度が大きいほど前面
 const intensityOrder = {
   "1":1,"2":2,"3":3,"4":4,
@@ -212,14 +212,15 @@ function addIntensityMarker(lat, lon, intensity, text){
       const maxIntensity = p2pToShindo[eq.maxScale] || '不明';
 
       document.getElementById('hypo-info').innerHTML =
-        `【WDIN地震情報】<br>発生時刻: ${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
-        ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}` : '発生時刻不明'}<br>
+        `【WDIN地震情報】<br>
+         発生時刻: ${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
+         ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}` : '不明'}<br>
          震源地: ${hypo.name || '不明'}<br>
-         マグニチュード: M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}
-         震源の深さ: ${hypo.depth != null ? hypo.depth : '不明'}km<br>
+         M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}　
+         深さ ${hypo.depth != null ? hypo.depth : '不明'}km<br>
          最大震度: ${maxIntensity}`;
 
-      break; // 最新1件のみ
+      break;
     }
   } catch (e) {
     document.getElementById('loading').innerHTML =
