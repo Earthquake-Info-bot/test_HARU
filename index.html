@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップv8</title>
+<title>地震マップ v8（OpenStreetMap）</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -14,40 +14,40 @@ body {
 #map { width: 100%; height: 100vh; }
 
 .intensity-marker {
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  border-radius:50%;
-  width:32px;
-  height:32px;
-  font-weight:bold;
-  font-size:14px;
-  border:2px solid rgba(0,0,0,0.2);
-  box-sizing:border-box;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-weight: bold;
+  font-size: 14px;
+  border: 2px solid rgba(0,0,0,0.2);
+  box-sizing: border-box;
 }
 
 #loading {
-  position:absolute;
-  top:30px;
-  left:50%;
-  transform:translateX(-50%);
-  background:white;
-  padding:6px 12px;
-  border:1px solid black;
-  z-index:100000;
-  font-weight:bold;
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 6px 12px;
+  border: 1px solid black;
+  z-index: 100000;
+  font-weight: bold;
 }
 
 #hypo-info {
-  position:absolute;
-  top:10px;
-  left:10px;
-  background:rgba(255,255,255,0.9);
-  padding:8px 12px;
-  border:1px solid black;
-  z-index:100000;
-  font-weight:bold;
-  line-height:1.3;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(255,255,255,0.9);
+  padding: 8px 12px;
+  border: 1px solid black;
+  z-index: 100000;
+  font-weight: bold;
+  line-height: 1.3;
 }
 </style>
 </head>
@@ -63,11 +63,11 @@ body {
 // ==================== 地図初期化 ====================
 const map = L.map('map').setView([37.5, 138], 5);
 
-// --- 国土地理院 白地図（都道府県境あり） ---
+// ★ あなたが貼ったサンプルと同じ OpenStreetMap
 L.tileLayer(
-  'https://cyberjapandata.gsi.go.jp/xyz/blank/{z}/{x}/{y}.png',
+  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
   {
-    attribution: '© 国土地理院',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
     maxZoom: 18
   }
 ).addTo(map);
@@ -104,7 +104,7 @@ const intensityOrder = {
   "5-":5,"5+":6,"6-":7,"6+":8,"7":9
 };
 
-// ==================== 座標取得 ====================
+// ==================== 観測点座標取得 ====================
 async function getCoordinates(names) {
   const res = await fetch('./quake_station.json');
   if (!res.ok) throw new Error('coords fetch failed');
@@ -130,17 +130,17 @@ async function getCoordinates(names) {
 }
 
 // ==================== 震度マーカー ====================
-function addIntensityMarker(lat, lon, intensity, text){
+function addIntensityMarker(lat, lon, intensity, text) {
   const icon = L.divIcon({
-    className:'',
-    html:`<div class="intensity-marker"
+    className: '',
+    html: `<div class="intensity-marker"
       style="background:${colors[intensity]};
-      color:${textColors[intensity]}">${intensity}</div>`,
-    iconSize:[32,32],
-    iconAnchor:[16,16]
+             color:${textColors[intensity]}">${intensity}</div>`,
+    iconSize: [32,32],
+    iconAnchor: [16,16]
   });
 
-  const marker = L.marker([lat,lon], {
+  const marker = L.marker([lat, lon], {
     icon,
     zIndexOffset: intensityOrder[intensity] * 1000
   }).addTo(map);
@@ -163,8 +163,8 @@ function addIntensityMarker(lat, lon, intensity, text){
 
       const points = eqData.points || [];
       const names = points.map(p => p.addr);
-
       const coordMap = await getCoordinates(names);
+
       let bounds = [];
 
       points.forEach(p => {
@@ -183,27 +183,27 @@ function addIntensityMarker(lat, lon, intensity, text){
         bounds.push([hypo.latitude, hypo.longitude]);
 
         const cross = L.divIcon({
-          className:'',
-          html:`<div style="width:30px;height:30px;
+          className: '',
+          html: `<div style="width:30px;height:30px;
             position:relative;transform:rotate(45deg)">
             <div style="position:absolute;left:13px;
               width:4px;height:30px;background:red"></div>
             <div style="position:absolute;top:13px;
               width:30px;height:4px;background:red"></div>
           </div>`,
-          iconSize:[30,30],
-          iconAnchor:[15,15],
-          pane:'hypocenterPane'
+          iconSize: [30,30],
+          iconAnchor: [15,15],
+          pane: 'hypocenterPane'
         });
 
         L.marker(
           [hypo.latitude, hypo.longitude],
-          {icon:cross, interactive:false}
+          { icon: cross, interactive: false }
         ).addTo(map);
       }
 
       if (bounds.length) {
-        map.fitBounds(bounds, {padding:[120,120], maxZoom:8});
+        map.fitBounds(bounds, { padding:[120,120], maxZoom: 8 });
       }
 
       document.getElementById('loading').style.display = 'none';
@@ -216,11 +216,11 @@ function addIntensityMarker(lat, lon, intensity, text){
          発生時刻: ${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
          ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}` : '不明'}<br>
          震源地: ${hypo.name || '不明'}<br>
-         M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}　
-         深さ ${hypo.depth != null ? hypo.depth : '不明'}km<br>
+         マグニチュード: M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}<br>
+         震源の深さ: ${hypo.depth != null ? hypo.depth : '不明'}km<br>
          最大震度: ${maxIntensity}`;
 
-      break;
+      break; // 最新1件のみ
     }
   } catch (e) {
     document.getElementById('loading').innerHTML =
