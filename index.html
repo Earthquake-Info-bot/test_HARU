@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップ v4</title>
+<title>地震マップ v5</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -47,25 +47,7 @@ body {
   border:1px solid black;
   z-index:100000;
   font-weight:bold;
-  line-height:1.2;
-}
-
-#max-intensity {
-  position:absolute;
-  left:10px;
-  border:1px solid black;
-  text-align:center;
-  z-index:100000;
-  padding:4px 12px;
-}
-
-#max-intensity .label {
-  font-size:0.85em;
-}
-
-#max-intensity .scale {
-  font-size:2.2em;
-  font-weight:bold;
+  line-height:1.3;
 }
 </style>
 </head>
@@ -74,11 +56,6 @@ body {
 <div id="map"></div>
 <div id="loading">読み込み中…</div>
 <div id="hypo-info"></div>
-
-<div id="max-intensity">
-  <div class="label">最大震度</div>
-  <div class="scale">--</div>
-</div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
@@ -108,17 +85,20 @@ const p2pToShindo = {
   10:"1",20:"2",30:"3",40:"4",45:"5-",
   50:"5+",55:"6-",60:"6+",70:"7"
 };
+// 震度が大きいほど前面
+const intensityOrder = {
+  "1":1,"2":2,"3":3,"4":4,
+  "5-":5,"5+":6,"6-":7,"6+":8,"7":9
+};
 
-// ==================== 座標取得（gist raw・最終確定） ====================
+// ==================== 座標取得 ====================
 async function getCoordinates(names) {
-  const res = await fetch(
-    'https://earthquake-info-bot.github.io/test_HARU/quake_station.json'
-  );
+  const res = await fetch('./quake_station.json');
   if (!res.ok) throw new Error('coords fetch failed');
 
-  const list = await res.json(); // ← 確実に配列
-
+  const list = await res.json();
   const dict = {};
+
   list.forEach(item => {
     if (item.name && item.lat && item.lon) {
       dict[item.name] = {
@@ -136,7 +116,7 @@ async function getCoordinates(names) {
   return result;
 }
 
-// ==================== マーカー ====================
+// ==================== 震度マーカー ====================
 function addIntensityMarker(lat, lon, intensity, text){
   const icon = L.divIcon({
     className:'',
@@ -146,16 +126,13 @@ function addIntensityMarker(lat, lon, intensity, text){
     iconSize:[32,32],
     iconAnchor:[16,16]
   });
-  const m = L.marker([lat,lon], {icon}).addTo(map);
-  if (text) m.bindPopup(text);
-}
 
-// ==================== 最大震度位置調整 ====================
-function updateMaxIntensityPosition(){
-  const info = document.getElementById('hypo-info');
-  const maxI = document.getElementById('max-intensity');
-  const r = info.getBoundingClientRect();
-  maxI.style.top = (r.bottom + 5) + 'px';
+  const marker = L.marker([lat,lon], {
+    icon,
+    zIndexOffset: intensityOrder[intensity] * 1000
+  }).addTo(map);
+
+  if (text) marker.bindPopup(text);
 }
 
 // ==================== 地震情報取得 ====================
@@ -205,6 +182,7 @@ function updateMaxIntensityPosition(){
           iconAnchor:[15,15],
           pane:'hypocenterPane'
         });
+
         L.marker(
           [hypo.latitude, hypo.longitude],
           {icon:cross, interactive:false}
@@ -218,32 +196,21 @@ function updateMaxIntensityPosition(){
       document.getElementById('loading').style.display = 'none';
 
       const time = eq.time ? new Date(eq.time) : null;
+      const maxIntensity = p2pToShindo[eq.maxScale] || '不明';
+
       document.getElementById('hypo-info').innerHTML =
         `${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
         ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}頃` : '発生時刻不明'}<br>
          ${hypo.name || '震源地不明'}<br>
          M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}
-         深さ ${hypo.depth != null ? hypo.depth : '不明'}km`;
-
-      const scale = p2pToShindo[eq.maxScale] || '--';
-      const maxI = document.getElementById('max-intensity');
-      maxI.querySelector('.scale').textContent = scale;
-
-      if (scale !== '--') {
-        maxI.style.background = colors[scale];
-        maxI.style.color = textColors[scale];
-      }
-
-      updateMaxIntensityPosition();
-      window.addEventListener('resize', updateMaxIntensityPosition);
+         深さ ${hypo.depth != null ? hypo.depth : '不明'}km<br>
+         <span>最大震度：${maxIntensity}</span>`;
 
       break; // 最新1件のみ
     }
   } catch (e) {
-    const loading = document.getElementById('loading');
-    loading.innerHTML =
-      '<b>エラー内容</b><br>' +
-      (e?.message || e);
+    document.getElementById('loading').innerHTML =
+      '<b>エラー内容</b><br>' + (e?.message || e);
   }
 })();
 </script>
