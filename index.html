@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップv1</title>
+<title>地震マップ v2</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -109,31 +109,30 @@ const p2pToShindo = {
   50:"5+",55:"6-",60:"6+",70:"7"
 };
 
-// ==================== 座標取得（gist API 経由） ====================
+// ==================== 座標取得（Safari対応・raw直） ====================
 async function getCoordinates(names) {
   const res = await fetch(
-    'fetch('https://raw.githubusercontent.com/iku55/79005d1896631ad6117bbe327b8162c1/main/quake_station.json')'
+    'https://raw.githubusercontent.com/iku55/79005d1896631ad6117bbe327b8162c1/main/quake_station.json'
   );
   if (!res.ok) throw new Error('coords fetch failed');
 
-  const gist = await res.json();
-  const file = Object.values(gist.files)[0];
-  const list = JSON.parse(file.content);
+  const json = await res.json();
+  const list = Array.isArray(json) ? json : Object.values(json);
 
   const dict = {};
-  for (const item of list) {
+  list.forEach(item => {
     if (item.name && item.lat && item.lon) {
       dict[item.name] = {
         lat: Number(item.lat),
         lon: Number(item.lon)
       };
     }
-  }
+  });
 
   const result = {};
-  for (const name of names) {
-    if (dict[name]) result[name] = dict[name];
-  }
+  names.forEach(n => {
+    if (dict[n]) result[n] = dict[n];
+  });
   return result;
 }
 
@@ -165,12 +164,14 @@ function updateMaxIntensityPosition(){
     const res = await fetch(
       'https://api.p2pquake.net/v2/history?codes=551&limit=5'
     );
+    if (!res.ok) throw new Error('p2p fetch failed');
+
     const data = await res.json();
 
     for (const eqData of data) {
       if (eqData.issue?.type !== "DetailScale") continue;
 
-      const points = eqData.points;
+      const points = eqData.points || [];
       const names = points.map(p => p.addr);
 
       const coordMap = await getCoordinates(names);
@@ -185,10 +186,10 @@ function updateMaxIntensityPosition(){
         }
       });
 
-      const eq = eqData.earthquake;
-      const hypo = eq.hypocenter;
+      const eq = eqData.earthquake || {};
+      const hypo = eq.hypocenter || {};
 
-      if (hypo?.latitude > -100 && hypo?.longitude > -100) {
+      if (hypo.latitude > -100 && hypo.longitude > -100) {
         bounds.push([hypo.latitude, hypo.longitude]);
 
         const cross = L.divIcon({
@@ -216,13 +217,13 @@ function updateMaxIntensityPosition(){
 
       document.getElementById('loading').style.display = 'none';
 
-      const time = new Date(eq.time);
+      const time = eq.time ? new Date(eq.time) : null;
       document.getElementById('hypo-info').innerHTML =
-        `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
-         ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}頃<br>
-         ${hypo?.name || '震源地不明'}<br>
-         M${hypo?.magnitude?.toFixed(1) ?? '不明'}
-         深さ ${hypo?.depth ?? '不明'}km`;
+        `${time ? `${time.getFullYear()}/${time.getMonth()+1}/${time.getDate()}
+        ${time.getHours()}:${String(time.getMinutes()).padStart(2,'0')}頃` : '発生時刻不明'}<br>
+         ${hypo.name || '震源地不明'}<br>
+         M${hypo.magnitude != null ? hypo.magnitude.toFixed(1) : '不明'}
+         深さ ${hypo.depth != null ? hypo.depth : '不明'}km`;
 
       const scale = p2pToShindo[eq.maxScale] || '--';
       const maxI = document.getElementById('max-intensity');
