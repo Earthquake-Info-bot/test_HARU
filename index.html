@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>地震マップ v8（OpenStreetMap）</title>
+<title>地震マップ v8</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 
@@ -100,30 +100,24 @@ async function getCoordinates(names) {
 
   const list = await res.json();
   const dict = {};
-
-  list.forEach(item => {
-    if (item.name && item.lat && item.lon) {
-      dict[item.name] = { lat: Number(item.lat), lon: Number(item.lon) };
-    }
+  list.forEach(item=>{
+    if(item.name && item.lat && item.lon) dict[item.name] = {lat:Number(item.lat),lon:Number(item.lon)};
   });
 
   const result = {};
-  names.forEach(n => { if(dict[n]) result[n] = dict[n]; });
+  names.forEach(n=>{ if(dict[n]) result[n]=dict[n]; });
   return result;
 }
 
 // ==================== 震度マーカー ====================
-function addIntensityMarker(lat, lon, intensity, text) {
+function addIntensityMarker(lat, lon, intensity, text){
   const icon = L.divIcon({
     className:'',
     html:`<div class="intensity-marker" style="background:${colors[intensity]}; color:${textColors[intensity]}">${intensity}</div>`,
     iconSize:[32,32],
     iconAnchor:[16,16]
   });
-  const marker = L.marker([lat,lon], {
-    icon,
-    zIndexOffset: intensityOrder[intensity]*1000
-  }).addTo(map);
+  const marker = L.marker([lat,lon],{icon, zIndexOffset:intensityOrder[intensity]*1000}).addTo(map);
   if(text) marker.bindPopup(text);
 }
 
@@ -143,14 +137,14 @@ function addIntensityMarker(lat, lon, intensity, text) {
 
       let bounds = [];
 
-      // 最大震度を計算
+      // 最大震度計算
       let maxIntVal = 0;
       points.forEach(p=>{
         const i = p2pToShindo[p.scale];
-        if(i && intensityOrder[i] > maxIntVal) maxIntVal = intensityOrder[i];
+        if(i && intensityOrder[i]>maxIntVal) maxIntVal = intensityOrder[i];
       });
 
-      // 震度マーカー追加
+      // 震度マーカー
       points.forEach(p=>{
         const c = coordMap[p.addr];
         const i = p2pToShindo[p.scale];
@@ -160,7 +154,7 @@ function addIntensityMarker(lat, lon, intensity, text) {
         }
       });
 
-      // 震源マーカー
+      // 震源マーカー（最大震度の前面）
       const eq = eqData.earthquake || {};
       const hypo = eq.hypocenter || {};
       if(hypo.latitude>-100 && hypo.longitude>-100){
@@ -176,7 +170,7 @@ function addIntensityMarker(lat, lon, intensity, text) {
           iconAnchor:[15,15]
         });
 
-        const zOffset = maxIntVal*1000 + 1; // 最大震度の前面
+        const zOffset = maxIntVal*1000 + 1;
         L.marker([hypo.latitude,hypo.longitude],{icon:cross,interactive:false,zIndexOffset:zOffset}).addTo(map);
       }
 
